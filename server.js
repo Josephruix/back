@@ -97,49 +97,28 @@ app.post("/verificar-usuario", function (req, res) {
 
 
 /* Guardar datos de equipos*/
-app.post('/G-Equipos',upload.single("imagen"), function (req, res) {
-    const datos = req.body
+app.post('/G-Equipos', upload.single('imagen'), function(req, res) {
+    const datos = req.body;
+    const { Marca, Descripcion, Estado, Empresa, Equipo, Sala, serial } = datos;
+    const img = req.file ? req.file.buffer : null;
 
-    const Marca = datos.Marca
-    const Descripcion = datos.Descripcion
-    const Estado = datos.Estado
-    const Empresa = datos.Empresa
-    const Equipo = datos.Equipo
-    const Sala = datos.Sala
-    const idEquipos = datos.idequipos
-    const img = req.file ? req.file.buffer : null
-
-    console.log(datos)
-
-
-    let consulta = `SELECT idsalas FROM salas WHERE Nombre = '${Sala}'`
-
-    conexion.query(consulta, function (error, resultados) {
+    conexion.query('SELECT idsalas FROM salas WHERE Nombre = ?', [Sala], function(error, resultados) {
         if (error) {
-            throw error
+            throw error;
+        }
+        if (resultados.length > 0) {
+            const idSala = resultados[0].idsalas;
+
+            let insertar = 'INSERT INTO equipos (idEquipos, Marca, Descripcion, Estado, Empresa, Tipo_de_Equipo, fkidsalas, Serial, img) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+            conexion.query(insertar, [serial, Marca, Descripcion, Estado, Empresa, Equipo, idSala, serial, img], function(error) {
+                if (error) {
+                    throw error;
+                }
+                console.log('Datos del equipo almacenados correctamente');
+                res.json({ mensaje: 'Datos del equipo almacenados correctamente' });
+            });
         } else {
-
-            if (resultados.length > 0) {
-                const idSala = resultados[0].idsalas;
-
-                let insertar = `INSERT INTO equipos (idEquipos,Marca, Descripcion, Estado, Empresa, Tipo_de_Equipo, fkidsalas, Serial,img) VALUES (?,?,?,?,?,?,?,?);`
-
-                conexion.query(insertar,[idEquipos,Marca,Descripcion,Estado,Empresa,Equipo,idSala,Null,img], function (error) {
-                    if (error) {
-                        throw error
-                    } else {
-                        console.log("Datos del equipo almacenados correctamente")
-                        res.json({
-                            mensaje: 'Datos del equipo almacenados correctamente'
-                        });
-                    }
-                });
-            } else {
-
-                res.status(404).json({
-                    mensaje: 'No se encontró la sala especificada'
-                });
-            }
+            res.status(404).json({ mensaje: 'No se encontró la sala especificada' });
         }
     });
 });
@@ -150,19 +129,18 @@ app.post('/G-Salas', function (req, res) {
         Nombre,
         Ubicacion,
         PuertosR,
-        Null,
         CapacidadE,
         SalaE
     } = req.body;
 
     console.log(req.body);
 
-    const sqlQuery = 'INSERT INTO salas (Nombre, ubicacion, `N-PR`, `N-PE`, Capacidad_de_Equipos, `Equipos-en-sala`) VALUES (?, ?, ?, ?, ?, ?)';
+    const sqlQuery = 'INSERT INTO salas (Nombre, ubicacion, `N-PR`, Capacidad_de_Equipos, `Equipos-en-sala`) VALUES (?, ?, ?, ?, ?)';
 
-    conexion.query(sqlQuery, [Nombre, Ubicacion, PuertosR, Null, CapacidadE, SalaE], function (error, results) {
+    conexion.query(sqlQuery, [Nombre, Ubicacion, PuertosR, CapacidadE, SalaE], function (error, results) {
         if (error) {
             console.error('Error al insertar datos en la base de datos:', error);
-            res.status(500).json({
+            return res.status(500).json({
                 mensaje: 'Error al guardar los datos en la base de datos'
             });
         } else {
@@ -173,6 +151,7 @@ app.post('/G-Salas', function (req, res) {
         }
     });
 });
+
 //Informacion Salas
 app.get('/Salas', (req, res) => {
     conexion.query('SELECT * FROM salas', (error, resultados) => {
