@@ -16,8 +16,10 @@ let conexion = mysql.createConnection({
 
 app.use(cors());
 app.use(bodyParser.json())
-const storage=multer.memoryStorage();
-const upload=multer({storage:storage});
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage: storage
+});
 
 app.post("/guardar-datos", function (req, res) {
     const datos = req.body;
@@ -67,42 +69,79 @@ app.post("/guardar-datos", function (req, res) {
 
 /*verificacion-usuario*/
 
-
 app.post("/verificar-usuario", function (req, res) {
     const { usuario, Contrasena } = req.body;
     console.log({ usuario, Contrasena });
-    
 
     conexion.query(
-        `SELECT * FROM usuarios WHERE Correo = '${usuario}'`,
+        `SELECT * FROM usuarios WHERE Correo = ?`,
+        [usuario],
         function (error, resultados) {
             if (error) {
                 console.error('Error en la consulta:', error);
-                res.status(500).json({ mensaje: 'Error en la consulta a la base de datos' });
+                res.status(500).json({
+                    mensaje: 'Error en la consulta a la base de datos'
+                });
             } else {
                 if (resultados.length > 0) {
                     if (resultados[0].Contraseña === Contrasena) {
-                        res.json({ mensaje: "Inicio de sesión exitoso" });
+                        res.json({
+                            mensaje: "Inicio de sesión exitoso",
+                            usuario: resultados[0]  // Incluye la información del usuario en la respuesta
+                        });
                     } else {
-                        res.status(401).json({ mensaje: "Contraseña incorrecta" });
+                        res.status(401).json({
+                            mensaje: "Contraseña incorrecta"
+                        });
                     }
                 } else {
-                    res.status(404).json({ mensaje: "Usuario no encontrado" });
+                    res.status(404).json({
+                        mensaje: "Usuario no encontrado"
+                    });
                 }
             }
         }
     );
 });
 
+/* Informacion de usuarios*/
+app.get('/Perfil', (req, res) => {
+    const correo = req.query.correo;
+    if (!correo) {
+        return res.status(400).json({ mensaje: 'Correo es requerido' });
+    }
+    
+    conexion.query('SELECT * FROM usuarios WHERE Correo = ?', [correo], (error, resultados) => {
+        if (error) {
+            console.error('Error al obtener información de el usuario:', error);
+            return res.status(500).json({ error: 'Error al obtener información de el usuario' });
+        }
+        
+        if (resultados.length === 0) {
+            return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+        }
+
+        res.json(resultados[0]);
+    });
+});
+
 
 
 /* Guardar datos de equipos*/
-app.post('/G-Equipos', upload.single('imagen'), function(req, res) {
+app.post('/G-Equipos', upload.single('imagen'), function (req, res) {
     const datos = req.body;
-    const { Marca, Descripcion, Estado, Empresa, Equipo, Sala, serial } = datos;
+    const {
+        Marca,
+        Descripcion,
+        Estado,
+        Empresa,
+        Equipo,
+        Sala,
+        serial
+    } = datos;
     const img = req.file ? req.file.buffer : null;
 
-    conexion.query('SELECT idsalas FROM salas WHERE Nombre = ?', [Sala], function(error, resultados) {
+    conexion.query('SELECT idsalas FROM salas WHERE Nombre = ?', [Sala], function (error, resultados) {
         if (error) {
             throw error;
         }
@@ -110,19 +149,39 @@ app.post('/G-Equipos', upload.single('imagen'), function(req, res) {
             const idSala = resultados[0].idsalas;
 
             let insertar = 'INSERT INTO equipos (idEquipos, Marca, Descripcion, Estado, Empresa, Tipo_de_Equipo, fkidsalas, Serial, img) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-            conexion.query(insertar, [serial, Marca, Descripcion, Estado, Empresa, Equipo, idSala, serial, img], function(error) {
+            conexion.query(insertar, [serial, Marca, Descripcion, Estado, Empresa, Equipo, idSala, serial, img], function (error) {
                 if (error) {
                     throw error;
                 }
                 console.log('Datos del equipo almacenados correctamente');
-                res.json({ mensaje: 'Datos del equipo almacenados correctamente' });
+                res.json({
+                    mensaje: 'Datos del equipo almacenados correctamente'
+                });
             });
         } else {
-            res.status(404).json({ mensaje: 'No se encontró la sala especificada' });
+            res.status(404).json({
+                mensaje: 'No se encontró la sala especificada'
+            });
         }
     });
 });
-
+/*eliminar equipos*/
+app.delete('/eliminar-equipo/:serial', function (req, res) {
+    const serial = req.params.serial;
+    conexion.query('DELETE FROM equipos WHERE Serial  = ?', [serial], (error, resultados) => {
+        if (error) {
+            console.error('Error al eliminar equipo:', error);
+            res.status(500).json({
+                mensaje: 'Error al eliminar equipo en la base de datos'
+            });
+            return;
+        }
+        console.log('Equipo eliminado correctamente de la base de datos');
+        res.json({
+            mensaje: 'Equipo eliminado correctamente'
+        });
+    });
+});
 /* Guardar datos de salas */
 app.post('/G-Salas', function (req, res) {
     const {
@@ -135,7 +194,7 @@ app.post('/G-Salas', function (req, res) {
 
     console.log(req.body);
 
-    const sqlQuery = 'INSERT INTO salas (Nombre, ubicacion, `N-PR`, Capacidad_de_Equipos, `Equipos-en-sala`) VALUES (?, ?, ?, ?, ?)';
+    const sqlQuery = 'INSERT INTO salas (Nombre, ubicacion, `N-PR`, Capacidad_de_Equipos, `Equipos_en_sala`) VALUES (?, ?, ?, ?, ?)';
 
     conexion.query(sqlQuery, [Nombre, Ubicacion, PuertosR, CapacidadE, SalaE], function (error, results) {
         if (error) {
@@ -172,7 +231,7 @@ app.get('/Salas', (req, res) => {
 app.get('/consulta/:sala', (req, res) => {
     const sala = req.params.sala;
     console.log('Sala parameter received:', sala);
-    
+
     const query = `
         SELECT salas.Nombre, equipos.* 
         FROM salas 
@@ -184,21 +243,21 @@ app.get('/consulta/:sala', (req, res) => {
             console.error('Error en la consulta:', error);
             res.status(500).send('Error en la consulta');
             return;
-        }else{
+        } else {
             resultados.forEach(resultado => {
                 if (resultado.img) {
                     console.log(resultado.img)
-                    resultado.img=resultado.img.toString("base64")
-                    
+                    resultado.img = resultado.img.toString("base64")
+
                 } else {
-                    resultado.img= null;
+                    resultado.img = null;
                 }
-                
+
             });
             console.log('Query resultados:', resultados);
             res.json(resultados);
         }
-       
+
     });
 });
 /*Guardar eventos*/
@@ -207,29 +266,56 @@ app.post('/G-Eventos', (req, res) => {
     const FechaE = datos.FechaE;
     const Descripcion = datos.Descripcion;
 
-   
+
 
     const query = 'INSERT INTO eventos (fecha, descripcion) VALUES (?, ?)';
 
     conexion.query(query, [FechaE, Descripcion], (error, resultados) => {
         if (error) {
             console.error('Error al enviar información del evento:', error);
-            res.status(500).json({ mensaje: 'Error al guardar los datos en la base de datos' });
+            res.status(500).json({
+                mensaje: 'Error al guardar los datos en la base de datos'
+            });
             return;
         } else {
             console.log('Datos del evento almacenados correctamente en la base de datos');
-            res.json({ mensaje: 'Datos del evento almacenados correctamente' });
+            res.json({
+                mensaje: 'Datos del evento almacenados correctamente'
+            });
         }
     });
 });
+/*Eliminar Salas*/
+app.delete('/eliminar-Salas/:Nombre', function (req, res) {
+    const serial = req.params.Nombre;
+    conexion.query('DELETE FROM salas WHERE Nombre  = ?', [serial], (error, resultados) => {
+        if (error) {
+            console.error('Error al eliminar equipo:', error);
+            res.status(500).json({
+                mensaje: 'Error al eliminar equipo en la base de datos'
+            });
+            return;
+        }
+        console.log('Equipo eliminado correctamente de la base de datos');
+        res.json({
+            mensaje: 'Equipo eliminado correctamente'
+        });
+    });
+}); 
+
 /* Mover equipos */
 app.post('/mover-equipo', (req, res) => {
-    const { equipoId, nuevaSala } = req.body;
+    const {
+        equipoId,
+        nuevaSala
+    } = req.body;
 
     conexion.query('SELECT idsalas FROM salas WHERE Nombre = ?', [nuevaSala], (error, resultados) => {
         if (error) {
             console.error('Error en la consulta:', error);
-            res.status(500).json({ mensaje: 'Error en la consulta a la base de datos' });
+            res.status(500).json({
+                mensaje: 'Error en la consulta a la base de datos'
+            });
             return;
         }
 
@@ -239,14 +325,20 @@ app.post('/mover-equipo', (req, res) => {
             conexion.query('UPDATE equipos SET fkidsalas = ? WHERE serial = ?', [nuevaSalaId, equipoId], (error) => {
                 if (error) {
                     console.error('Error al actualizar equipo:', error);
-                    res.status(500).json({ mensaje: 'Error al actualizar equipo en la base de datos' });
+                    res.status(500).json({
+                        mensaje: 'Error al actualizar equipo en la base de datos'
+                    });
                     return;
                 }
 
-                res.json({ mensaje: 'Equipo movido correctamente' });
+                res.json({
+                    mensaje: 'Equipo movido correctamente'
+                });
             });
         } else {
-            res.status(404).json({ mensaje: 'No se encontró la sala especificada' });
+            res.status(404).json({
+                mensaje: 'No se encontró la sala especificada'
+            });
         }
     });
 });
