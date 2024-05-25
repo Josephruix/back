@@ -342,7 +342,24 @@ app.post('/mover-equipo', (req, res) => {
         }
     });
 });
+/*atuliza estado*/
+app.put('/actualizar-estado/:id', function (req, res) {
+    const idEquipo = req.params.id;
+    const nuevoEstado = req.body.estado;
 
+    conexion.query(
+        'UPDATE equipos SET Estado = ? WHERE idEquipos = ?',
+        [nuevoEstado, idEquipo],
+        function (error, resultados) {
+            if (error) {
+                console.error('Error al actualizar estado del equipo:', error);
+                return res.status(500).json({ mensaje: 'Error al actualizar estado del equipo en la base de datos' });
+            }
+            console.log('Estado del equipo actualizado correctamente');
+            res.json({ mensaje: 'Estado del equipo actualizado correctamente' });
+        }
+    );
+});
 
 app.listen(3000, function () {
     console.log('Servidor escuchando en el puerto 3000');
