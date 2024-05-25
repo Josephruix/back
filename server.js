@@ -87,7 +87,7 @@ app.post("/verificar-usuario", function (req, res) {
                     if (resultados[0].Contraseña === Contrasena) {
                         res.json({
                             mensaje: "Inicio de sesión exitoso",
-                            usuario: resultados[0]  // Incluye la información del usuario en la respuesta
+                            usuario: resultados[0] 
                         });
                     } else {
                         res.status(401).json({
@@ -148,8 +148,8 @@ app.post('/G-Equipos', upload.single('imagen'), function (req, res) {
         if (resultados.length > 0) {
             const idSala = resultados[0].idsalas;
 
-            let insertar = 'INSERT INTO equipos (idEquipos, Marca, Descripcion, Estado, Empresa, Tipo_de_Equipo, fkidsalas, Serial, img) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-            conexion.query(insertar, [serial, Marca, Descripcion, Estado, Empresa, Equipo, idSala, serial, img], function (error) {
+            let insertar = 'INSERT INTO equipos (idEquipos, Marca, Descripcion, Estado, Empresa, Tipo_de_Equipo, fkidsalas, img) VALUES (?, ?, ?, ?, ?, ?, ?,?)';
+            conexion.query(insertar, [serial, Marca, Descripcion, Estado, Empresa, Equipo, idSala,  img], function (error) {
                 if (error) {
                     throw error;
                 }
@@ -168,7 +168,7 @@ app.post('/G-Equipos', upload.single('imagen'), function (req, res) {
 /*eliminar equipos*/
 app.delete('/eliminar-equipo/:serial', function (req, res) {
     const serial = req.params.serial;
-    conexion.query('DELETE FROM equipos WHERE Serial  = ?', [serial], (error, resultados) => {
+    conexion.query('DELETE FROM equipos WHERE idEquipos = ?', [serial], (error, resultados) => {
         if (error) {
             console.error('Error al eliminar equipo:', error);
             res.status(500).json({
@@ -322,7 +322,7 @@ app.post('/mover-equipo', (req, res) => {
         if (resultados.length > 0) {
             const nuevaSalaId = resultados[0].idsalas;
 
-            conexion.query('UPDATE equipos SET fkidsalas = ? WHERE serial = ?', [nuevaSalaId, equipoId], (error) => {
+            conexion.query('UPDATE equipos SET fkidsalas = ? WHERE idEquipos = ?', [nuevaSalaId, equipoId], (error) => {
                 if (error) {
                     console.error('Error al actualizar equipo:', error);
                     res.status(500).json({
